@@ -67,6 +67,8 @@ CONF_RESET_LOW = "reset_low"
 def final_validation(config):
     if not esp32_rmt.use_new_rmt_driver() and CONF_RMT_CHANNEL not in config:
         raise cv.Invalid("rmt_channel is a required option.")
+    if esp32_rmt.use_new_rmt_driver() and CONF_RMT_CHANNEL in config:
+        cv.only_with_arduino(None)
 
 
 FINAL_VALIDATE_SCHEMA = final_validation
@@ -78,9 +80,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Required(CONF_PIN): pins.internal_gpio_output_pin_number,
             cv.Required(CONF_NUM_LEDS): cv.positive_not_null_int,
             cv.Required(CONF_RGB_ORDER): cv.enum(RGB_ORDERS, upper=True),
-            cv.Optional(CONF_RMT_CHANNEL): cv.All(
-                cv.only_with_arduino, esp32_rmt.validate_rmt_channel(tx=True)
-            ),
+            cv.Optional(CONF_RMT_CHANNEL): esp32_rmt.validate_rmt_channel(tx=True),
             cv.SplitDefault(
                 CONF_RMT_SYMBOLS,
                 esp32_idf=64,
