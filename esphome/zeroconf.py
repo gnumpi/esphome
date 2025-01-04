@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-import time
 import logging
-from typing import Callable, Optional
+import time
+from typing import Callable
 
 from zeroconf import IPVersion, ServiceInfo, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
@@ -201,23 +201,28 @@ class AsyncEsphomeZeroconf(AsyncZeroconf):
             return addresses
         return None
 
+
 NODE_SCAN_TIME_SEC = 2
+
 
 class NodeScanner:
     def __init__(self, node_raw_name: str) -> None:
         self.node_raw_name = node_raw_name
-        self.aiobrowser: Optional[AsyncServiceBrowser] = None
-        self.aiozc: Optional[AsyncZeroconf] = None
+        self.aiobrowser: AsyncServiceBrowser | None = None
+        self.aiozc: AsyncZeroconf | None = None
         self.found_nodes = []
-    
-    def async_on_service_state_change(self, 
-        zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
+
+    def async_on_service_state_change(
+        self,
+        zeroconf: Zeroconf,
+        service_type: str,
+        name: str,
+        state_change: ServiceStateChange,
     ) -> None:
         if state_change is not ServiceStateChange.Added:
             return
         if name.startswith(self.node_raw_name):
             self.found_nodes.append(name.split(".")[0] + ".local")
-        
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
@@ -226,11 +231,11 @@ class NodeScanner:
         self.aiobrowser = AsyncServiceBrowser(
             self.aiozc.zeroconf, services, handlers=[self.async_on_service_state_change]
         )
-        
+
         start_time = time.time()
         while time.time() - start_time < NODE_SCAN_TIME_SEC:
             await asyncio.sleep(1)
-        
+
         await self.async_close()
 
     async def async_close(self) -> None:
@@ -240,12 +245,12 @@ class NodeScanner:
         await self.aiozc.async_close()
 
 
-def get_mac_suffix_nodes(node_name:str) -> list[str]:
+def get_mac_suffix_nodes(node_name: str) -> list[str]:
     loop = asyncio.get_event_loop()
     runner = NodeScanner(node_name)
     try:
         loop.run_until_complete(runner.async_run())
     except KeyboardInterrupt:
         loop.run_until_complete(runner.async_close())
-    
+
     return runner.found_nodes
