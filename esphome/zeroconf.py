@@ -253,4 +253,4 @@ def get_mac_suffix_nodes(node_name: str) -> list[str]:
     except KeyboardInterrupt:
         loop.run_until_complete(runner.async_close())
 
-    return runner.found_nodes
+    return sorted(runner.found_nodes)
